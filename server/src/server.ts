@@ -105,7 +105,7 @@ wss.on('connection', (conn, req) => {
         // Fetch the record data from Airtable
         const record = await base(tableId).find(recordId);
         console.log('record', JSON.stringify({ fields: record.fields }));
-        conn.send(JSON.stringify({ data: record.fields}));
+        conn.send(JSON.stringify(record.fields));
 
         // Assign the room based on the path parameters
         // conn.room = currentRoom;
