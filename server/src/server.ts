@@ -66,7 +66,7 @@ wss.on('connection', (conn, req) => {
   let currentRoom = `${baseId}-${tableId}-${recordId}`;
   const base = airtable.base(baseId);
 
-  conn.on('message', async (message: ArrayBuffer) => {
+  conn.on('message', async (message: any) => {
     console.log(message.toString(), typeof message, message);
     try {
       if (!baseId || !tableId || !recordId) return;
@@ -76,12 +76,26 @@ wss.on('connection', (conn, req) => {
       try {
         if (message instanceof ArrayBuffer) {
           const uint8Array = new Uint8Array(message);
-          const decodedMessage = new TextDecoder().decode(uint8Array);
+          const decodedMessage = new TextDecoder('utf-8').decode(message);
           let parsedMessage = JSON.parse(decodedMessage);
           fieldId = parsedMessage.fieldId;
           value = parsedMessage.value;
           console.log(`Received message1: ${decodedMessage}`);
-        } else {
+        } else if (message instanceof Buffer) {
+          const decoder = new TextDecoder('utf-8');
+          const stringMessage = decoder.decode(message);
+          if (stringMessage === 'fetch') {
+            const record = await base(tableId).find(recordId);
+            const recordData = { ...record.fields };
+            Object.keys(recordData).forEach((key) => {
+              store.airtableData[key] = recordData[key];
+            });
+            console.log('Fetched record:', recordData);
+      
+            // Send the Airtable data to the client
+            conn.send(JSON.stringify(recordData));
+          }
+        }else {
           let parsedMessage = JSON.parse(message);
           fieldId = parsedMessage.fieldId;
           value = parsedMessage.value;
@@ -103,9 +117,9 @@ wss.on('connection', (conn, req) => {
         });
       } else {
         // Fetch the record data from Airtable
-        const record = await base(tableId).find(recordId);
-        console.log('record', JSON.stringify({ fields: record.fields }));
-        conn.send(JSON.stringify(record.fields));
+        // const record = await base(tableId).find(recordId);
+        // console.log('record', JSON.stringify({ fields: record.fields }));
+        // conn.send(JSON.stringify(record.fields));
 
         // Assign the room based on the path parameters
         // conn.room = currentRoom;

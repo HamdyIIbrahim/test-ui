@@ -11,6 +11,7 @@ export const store = syncedStore({ formData: {} as InitFormData });
 // Get the Yjs document
 const doc = getYjsDoc(store);
 const awareness = new Awareness(doc);
+export const yMap = doc.getMap('formData');
 
 let wsProvider: WebsocketProvider | null = null;
 
@@ -25,20 +26,22 @@ export const initializeProvider = (baseId: string, tableId: string, recordId: st
     };
 
     wsProvider.ws.onmessage = (event) => {
-        let messageData;
+        let messageData: any;
         try {
             if (event.data instanceof ArrayBuffer) {
                 const textData = new TextDecoder().decode(new Uint8Array(event.data));
-                messageData = JSON.parse(textData);
+                // messageData = JSON.parse(textData);
             } else {
                 messageData = JSON.parse(event.data);
             }
             console.log('Received data from WebSocket:', messageData);
 
             if (messageData) {
-                // Update each field individually
+                // let yFormData = store.formData as any;
+                // // store.formData = { ...store.formData, ...messageData };
                 Object.keys(messageData).forEach((key) => {
-                    store.formData[key] = messageData[key];
+                    yMap.set(key, messageData[key]);
+                    // store.formData[key] = messageData[key];
                 });
             }
         } catch (error) {

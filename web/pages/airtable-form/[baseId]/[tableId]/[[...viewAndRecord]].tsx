@@ -31,7 +31,7 @@ const AirtableForm = () => {
         Focus: formState.formData['Focus'],
         'Submitted On': formState.formData['Submitted On'],
         Name: formState.formData['Name'],
-        DynamicField: formState.formData['Dynamic Field'],
+        'Dynamic Field': formState.formData['Dynamic Field'],
         Calculation: formState.formData['Calculation'],
       });
     }
@@ -44,7 +44,7 @@ const AirtableForm = () => {
     // Respect original case-sensitive keys
     Object.keys(changedValues).forEach((key) => {
       const originalKey = key; // Use the original key from Airtable data
-      store.formData[originalKey] = changedValues[key];
+      formState.formData[originalKey] = changedValues[key];
     });
   };
 
@@ -59,7 +59,7 @@ const AirtableForm = () => {
       <p>Table ID: {tableId}</p>
       {viewId && <p>View ID: {viewId}</p>}
       <p>Record ID: {recordId}</p>
-      <p>Form data: {JSON.stringify(formState)}</p>
+      <p>Form data: {JSON.stringify(formState.formData)}</p>
       <div className='form'>
         <Form
           form={form}
@@ -77,7 +77,7 @@ const AirtableForm = () => {
           <Form.Item name='Name' label='Name' rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name='DynamicField' label='Dynamic Field'>
+          <Form.Item name='Dynamic Field' label='Dynamic Field'>
             <Input />
           </Form.Item>
           <Form.Item name='Calculation' label='Calculation'>
