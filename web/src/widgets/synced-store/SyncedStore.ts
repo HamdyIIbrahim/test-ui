@@ -4,9 +4,15 @@ import { Awareness } from 'y-protocols/awareness';
 
 // Define initial form data
 type InitFormData = { [key: string]: string; };
+interface ConfigData {
+    base?: string;
+    table?: string;
+    view?: string;
+    [key: string]: any;
+  }
 
 // Create the SyncedStore store
-export const store = syncedStore({ formData: {} as InitFormData });
+export const store = syncedStore({ formData: {} as InitFormData, configData: {} as ConfigData });
 
 // Get the Yjs document
 const doc = getYjsDoc(store);
@@ -15,9 +21,31 @@ export const yMap = doc.getMap('formData');
 
 let wsProvider: WebsocketProvider | null = null;
 
-export const initializeProvider = (baseId: string, tableId: string, recordId: string) => {
+export const initializeProvider = async (baseId: string, tableId: string, recordId: string) => {
     const roomName = `airtable-room-${baseId}-${tableId}-${recordId}`;
     wsProvider = new WebsocketProvider("ws://localhost:8000", roomName, doc, { awareness });
+
+    const fetchConfigs = async () => {
+        try {
+          const response = await fetch('http://localhost:8000/api/configs');;
+          if (!response.ok) {
+            throw new Error(`Error fetching configs: ${response.statusText}`);
+          }
+          const data: ConfigData[] = await response.json();
+  
+          // If the component is still mounted, update the SyncedStore
+            data.forEach((config) => {
+              // Update the SyncedStore with the fetched data
+              if(config.base === baseId && config.table === tableId) {
+                Object.assign(store.configData, config);
+              }
+            });
+        } catch (err) {
+          console.error('Error fetching configs:', err);
+        }
+      };
+  
+      await fetchConfigs();
     
     // Fetch the initial data by sending a 'fetch' message
     wsProvider.ws.onopen = () => {

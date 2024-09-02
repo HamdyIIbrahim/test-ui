@@ -1,9 +1,23 @@
 import { useSyncedStore } from '@syncedstore/react';
-import { Form, Input } from 'antd';
+// import { Form, Input } from 'antd';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { UiSchema } from '@rjsf/utils';
+import validator from '@rjsf/validator-ajv8'
+
+import Form from '@rjsf/core';
+import { Row, Col } from 'antd';
 
 import { store, initializeProvider, disconnectProvider } from '../../../../src/widgets/synced-store/SyncedStore';
+
+const uiSchema: UiSchema = {
+  name: {
+    'ui:classNames': 'custom-class-name',
+  },
+  age: {
+    'ui:classNames': 'custom-class-age',
+  },
+};
 
 const AirtableForm = () => {
   const router = useRouter();
@@ -11,12 +25,12 @@ const AirtableForm = () => {
   const viewId = Array.isArray(viewAndRecord) && viewAndRecord.length === 2 ? viewAndRecord[0] : undefined;
   const recordId = Array.isArray(viewAndRecord) ? viewAndRecord[viewAndRecord.length - 1] : undefined;
 
-  const [form] = Form.useForm();
+  // const [form] = Form.useForm();
   const formState = useSyncedStore(store);
 
   useEffect(() => {
     if (baseId && tableId && recordId) {
-      initializeProvider(baseId as string, tableId as string, recordId as string);
+     initializeProvider(baseId as string, tableId as string, recordId as string);
     }
 
     return () => {
@@ -25,17 +39,17 @@ const AirtableForm = () => {
   }, [baseId, tableId, recordId]);
 
   // Observe formState and update the form whenever it changes
-  useEffect(() => {
-    if (formState.formData && Object.keys(formState.formData).length > 0) {
-      form.setFieldsValue({
-        Focus: formState.formData['Focus'],
-        'Submitted On': formState.formData['Submitted On'],
-        Name: formState.formData['Name'],
-        'Dynamic Field': formState.formData['Dynamic Field'],
-        Calculation: formState.formData['Calculation'],
-      });
-    }
-  }, [formState.formData, form]);
+  // useEffect(() => {
+  //   if (formState.formData && Object.keys(formState.formData).length > 0) {
+  //     form.setFieldsValue({
+  //       Focus: formState.formData['Focus'],
+  //       'Submitted On': formState.formData['Submitted On'],
+  //       Name: formState.formData['Name'],
+  //       'Dynamic Field': formState.formData['Dynamic Field'],
+  //       Calculation: formState.formData['Calculation'],
+  //     });
+  //   }
+  // }, [JSON.stringify(formState.formData), form]);
  
   const handleFormChange = (
     changedValues: Record<string, any>,
@@ -60,7 +74,22 @@ const AirtableForm = () => {
       {viewId && <p>View ID: {viewId}</p>}
       <p>Record ID: {recordId}</p>
       <p>Form data: {JSON.stringify(formState.formData)}</p>
-      <div className='form'>
+      <p>Form config: {JSON.stringify(formState.configData)}</p>
+      <Row justify="start">
+        <Col span={12}>
+          <Form
+            schema={formState.configData.viewConfig}
+            validator={validator}
+            uiSchema={uiSchema}
+            formData={formState.formData}
+            children={true}
+            // uiSchema={uiSchema}
+            // FieldTemplate={CustomFieldTemplate}
+            // onSubmit={handleSubmit}
+          />
+        </Col>
+      </Row>
+      {/* <div className='form'>
         <Form
           form={form}
           name='validateOnly'
@@ -84,7 +113,7 @@ const AirtableForm = () => {
             <Input />
           </Form.Item>
         </Form>
-      </div>
+      </div> */}
     </div>
   );
 };

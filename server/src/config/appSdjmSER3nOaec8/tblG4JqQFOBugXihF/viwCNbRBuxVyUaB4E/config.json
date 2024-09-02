@@ -1,0 +1,22 @@
+{
+    "title": "Test form",
+  "type": "object",
+  "properties": {
+    "Focus": {
+      "type": "string"
+    },
+    "Submitted On": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "Name": {
+        "type": "string"
+    },
+    "Dynamic Field": {
+        "type":"string"
+    },
+    "Calculation": {
+        "type":"string"
+    }
+  }
+}
