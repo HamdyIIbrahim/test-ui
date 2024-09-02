@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import Airtable from 'airtable';
 import Y from 'yjs';
 import { syncedStore, getYjsValue } from "@syncedstore/core";
+import * as fs from 'fs';
+import * as path from 'path';
+import cors from 'cors';
 
 const app = express();
 const server = http.createServer(app);
@@ -13,7 +16,7 @@ const wss = new WebSocket.Server({ server });
 dotenv.config();
 
 const PORT = process.env.PORT || 8000;
-
+app.use(cors());
 // Initialize Airtable (replace with your Airtable API Key)
 const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
 
@@ -157,6 +160,62 @@ wss.on('connection', (conn, req) => {
 app.get('/', (req, res) => {
   res.send('WebSocket server is running. Connect using a WebSocket client.');
 });
+interface ConfigData {
+  [key: string]: any; // Define as per the expected structure of config.json
+  base?: string;
+  table?: string;
+  view?: string;
+}
+
+// Function to recursively read directories and find all config.json files
+function readConfigFilesRecursively(dir: string): ConfigData[] {
+  const results: ConfigData[] = [];
+
+  // Read the current directory
+  const files = fs.readdirSync(dir);
+  files.forEach((file: string) => {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      // If the item is a directory, recursively read it
+      results.push(...readConfigFilesRecursively(fullPath));
+    } else if (file === 'config.json') {
+      // If a config.json is found, read its content
+      const content = fs.readFileSync(fullPath, 'utf8');
+      let configData: ConfigData;
+
+      try {
+        configData = JSON.parse(content) as ConfigData;
+      } catch (error) {
+        console.error(`Error parsing JSON from file ${fullPath}:`, error);
+        return; // Skip invalid JSON
+      }
+
+      // Extract base, table, view from the file path
+      const pathSegments = fullPath.split(path.sep);
+      const [base, table, view] = pathSegments.slice(-4, -1); // Adjust slicing depending on depth
+
+      // Add the base, table, view information to the config data
+      const enrichedConfig: ConfigData = {
+        base,
+        table,
+        view,
+        viewConfig: {...configData}
+      };
+
+      results.push(enrichedConfig);
+    }
+  });
+
+  return results;
+}
+app.get('/api/configs', (req, res) => {
+  const rootConfigDir = path.join(__dirname, 'config'); 
+  const allConfigs: ConfigData[] = readConfigFilesRecursively(rootConfigDir);
+  res.send(allConfigs);
+});
+
 
 server.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
