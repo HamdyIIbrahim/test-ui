@@ -176,7 +176,7 @@ wss.on('connection', (conn, req) => {
       }
 
       if (fieldId && value) {
-        console.log('111111111111111111111111111', fieldId, value)
+        console.log(fieldId, value)
         // Update the specific field in Airtable
         await base(tableId).update(recordId, { [fieldId]: value });
 
