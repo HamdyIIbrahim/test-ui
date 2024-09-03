@@ -1,6 +1,6 @@
 import { useSyncedStore } from '@syncedstore/react';
 // import { Form, Input } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { UiSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8'
@@ -8,7 +8,7 @@ import validator from '@rjsf/validator-ajv8'
 import Form from '@rjsf/core';
 import { Row, Col } from 'antd';
 
-import { store, initializeProvider, disconnectProvider } from '../../../../src/widgets/synced-store/SyncedStore';
+import { store, initializeProvider, disconnectProvider, updateFormData } from '../../../../src/widgets/synced-store/SyncedStore';
 
 const uiSchema: UiSchema = {
   name: {
@@ -27,6 +27,8 @@ const AirtableForm = () => {
 
   // const [form] = Form.useForm();
   const formState = useSyncedStore(store);
+  const [previousFormData, setPreviousFormData] = useState<Record<string, any> | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     if (baseId && tableId && recordId) {
@@ -38,31 +40,47 @@ const AirtableForm = () => {
     };
   }, [baseId, tableId, recordId]);
 
-  // Observe formState and update the form whenever it changes
-  // useEffect(() => {
-  //   if (formState.formData && Object.keys(formState.formData).length > 0) {
-  //     form.setFieldsValue({
-  //       Focus: formState.formData['Focus'],
-  //       'Submitted On': formState.formData['Submitted On'],
-  //       Name: formState.formData['Name'],
-  //       'Dynamic Field': formState.formData['Dynamic Field'],
-  //       Calculation: formState.formData['Calculation'],
-  //     });
-  //   }
-  // }, [JSON.stringify(formState.formData), form]);
- 
-  const handleFormChange = (
-    changedValues: Record<string, any>,
-    allValues: any
-  ) => {
-    // Respect original case-sensitive keys
-    Object.keys(changedValues).forEach((key) => {
-      const originalKey = key; // Use the original key from Airtable data
-      formState.formData[originalKey] = changedValues[key];
+  useEffect(() => {
+    if (formState.formData) {
+      setPreviousFormData({ ...formState.formData });
+      setIsInitialLoad(false);
+      // if (isInitialLoad) {
+      //   // Use a timeout to ensure formState.formData is fully populated
+      //   const timer = setTimeout(() => {
+      //     setIsInitialLoad(false);
+      //   }, 3000); // Adjust the timeout as needed
+  
+      //   return () => clearTimeout(timer);
+      // }
+    }
+  }, [JSON.stringify(formState.formData), isInitialLoad]);
+
+  const handleFormChange = (formData: Record<string, any>) => {
+    const changedFields: Record<string, any> = {};
+
+    Object.keys(formData).forEach((key) => {
+      if (formData[key] !== previousFormData[key]) {
+        changedFields[key] = formData[key];
+      }
     });
+
+    // Update previous form data
+    setPreviousFormData({ ...formData });
+
+    // Update the SyncedStore
+    Object.assign(formState.formData, changedFields);
+
+    console.log(changedFields, JSON.stringify(formState.formData), formData);
+
+    // Send updated fields to WebSocket server
+    if (!isInitialLoad) {
+      Object.keys(changedFields).forEach((key) => {
+        updateFormData(key, changedFields[key]);
+      });
+    }
   };
 
-  if (!formState.formData || Object.keys(formState.formData).length === 0) {
+  if (!formState.formData || Object.keys(formState.formData).length === 0 || isInitialLoad) {
     return <p>Loading...</p>;
   }
 
@@ -83,6 +101,7 @@ const AirtableForm = () => {
             uiSchema={uiSchema}
             formData={formState.formData}
             children={true}
+            onChange={({ formData }) => handleFormChange(formData)}
             // uiSchema={uiSchema}
             // FieldTemplate={CustomFieldTemplate}
             // onSubmit={handleSubmit}

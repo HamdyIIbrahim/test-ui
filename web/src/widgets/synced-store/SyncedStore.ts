@@ -50,7 +50,7 @@ export const initializeProvider = async (baseId: string, tableId: string, record
     // Fetch the initial data by sending a 'fetch' message
     wsProvider.ws.onopen = () => {
       console.log('WebSocket connected');
-      wsProvider.ws.send('fetch');
+      wsProvider.ws.send(JSON.stringify({type: 'fetch'}));
     };
 
     wsProvider.ws.onmessage = (event) => {
@@ -65,12 +65,18 @@ export const initializeProvider = async (baseId: string, tableId: string, record
             console.log('Received data from WebSocket:', messageData);
 
             if (messageData) {
+                if (messageData.type === 'fetchedData') {
+                    Object.keys(messageData.recordData).forEach((key) => {
+                        yMap.set(key, messageData.recordData[key]);
+                        // store.formData[key] = messageData[key];
+                    });
+                } else if (messageData.type === 'updatedField') {
+                    console.log('1', yMap.toJSON());
+                    yMap.set(messageData.fieldId, messageData.value);
+                    console.log('2', yMap.toJSON());
+                }
                 // let yFormData = store.formData as any;
                 // // store.formData = { ...store.formData, ...messageData };
-                Object.keys(messageData).forEach((key) => {
-                    yMap.set(key, messageData[key]);
-                    // store.formData[key] = messageData[key];
-                });
             }
         } catch (error) {
             console.error('Error processing message:', error);
@@ -89,4 +95,17 @@ export const initializeProvider = async (baseId: string, tableId: string, record
 export const disconnectProvider = () => {
   wsProvider?.destroy();
   wsProvider = null;
+};
+
+// Handle updates from the WebSocket client
+export const updateFormData = (fieldId: string, value: any) => {
+    if (yMap) {
+        yMap.set(fieldId, value);
+  
+        // Send the update to the WebSocket server
+        if (wsProvider?.ws?.readyState === WebSocket.OPEN) {
+            const message = JSON.stringify({ type: 'updateField', fieldId, value });
+            wsProvider.ws.send(message);
+        }
+    }
 };
