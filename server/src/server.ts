@@ -55,13 +55,21 @@ const yjsValue = getYjsValue(store);
 // });
 const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   try {
-    const record = await airtable.base('baseId').table(tableId).find(recordId);
+    const record = await airtable.base(baseId).table(tableId).find(recordId);
     return record.fields;
   } catch (error) {
     console.error('Error fetching Airtable record:', error);
     return null;
   }
 };
+const parseJSON = (data: any) => {
+  try{
+    return JSON.parse(data)
+  } catch(e) {
+    console.log(e)
+    return null
+  }
+}
 
 
 
@@ -84,16 +92,15 @@ wss.on('connection', (conn, req) => {
   // setupWSConnection(conn, req);
   let currentRoom = `${baseId}-${tableId}-${recordId}`;
   const base = airtable.base(baseId);
-
   const broadcastData = (data: any) => {
     wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === WebSocket.OPEN && client.room === currentRoom) {
         conn.send(JSON.stringify({type: 'fetchedData', recordData: data}));
       }
     });
   };
-  
-  const pollInterval = 10000; // 10 seconds
+
+  let pollInterval = process.env.POLL_INTERVAL ? parseInt(process.env.POLL_INTERVAL) : 10000; // 10 seconds
   setInterval(async () => {
     console.log('Polling Airtable for record data...');
     const recordData = await fetchAirtableRecord(recordId, baseId, tableId);
@@ -105,6 +112,8 @@ wss.on('connection', (conn, req) => {
     }
   }, pollInterval);
 
+  
+  
   conn.on('message', async (message: any) => {
     console.log(message.toString(), typeof message, message);
     try {
@@ -114,9 +123,9 @@ wss.on('connection', (conn, req) => {
 
       try {
         const decodedMessage = new TextDecoder().decode(new Uint8Array(message));
-        const parsedMessage = JSON.parse(decodedMessage);
+        const parsedMessage = parseJSON(decodedMessage);
 
-        if (parsedMessage.type) {
+        if (parsedMessage && parsedMessage.type) {
           if (parsedMessage.type == 'fetch') {
             const record = await base(tableId).find(recordId);
             const recordData = { ...record.fields };
