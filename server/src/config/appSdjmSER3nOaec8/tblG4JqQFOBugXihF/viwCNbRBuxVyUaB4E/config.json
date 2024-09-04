@@ -1,9 +1,19 @@
-{
+{"viewConfig": {
     "title": "Test form",
   "type": "object",
   "properties": {
     "Focus": {
-      "type": "string"
+      "type": "string",
+      "oneOf": [
+        {
+          "const": "Test1",
+          "title": "test12"
+        },
+        {
+          "const": "Test2",
+          "title": "test2"
+        }
+      ]
     },
     "Submitted On": {
       "type": "string",
@@ -19,4 +29,15 @@
         "type":"string"
     }
   }
+},
+"uiSchema" : {
+  "Focus": {
+    "ui:autofocus": true,
+    "ui:emptyValue": "",
+    "ui:placeholder": "",
+    "ui:autocomplete": "",
+    "ui:enableMarkdownInDescription": true,
+    "ui:description": ""
+  }
+}
 }
