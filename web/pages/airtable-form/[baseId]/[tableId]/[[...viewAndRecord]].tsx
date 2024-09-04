@@ -10,14 +10,14 @@ import { Row, Col } from 'antd';
 
 import { store, initializeProvider, disconnectProvider, updateFormData } from '../../../../src/widgets/synced-store/SyncedStore';
 
-const uiSchema: UiSchema = {
-  name: {
-    'ui:classNames': 'custom-class-name',
-  },
-  age: {
-    'ui:classNames': 'custom-class-age',
-  },
-};
+// const uiSchema: UiSchema = {
+//   name: {
+//     'ui:classNames': 'custom-class-name',
+//   },
+//   age: {
+//     'ui:classNames': 'custom-class-age',
+//   },
+// };
 
 const AirtableForm = () => {
   const router = useRouter();
@@ -94,11 +94,11 @@ const AirtableForm = () => {
       <p>Form data: {JSON.stringify(formState.formData)}</p>
       <p>Form config: {JSON.stringify(formState.configData)}</p>
       <Row justify="start">
-        <Col span={12}>
+        <Col span={20}>
           <Form
             schema={formState.configData.viewConfig}
             validator={validator}
-            uiSchema={uiSchema}
+            uiSchema={formState.configData.uiSchema}
             formData={formState.formData}
             children={true}
             onChange={({ formData }) => handleFormChange(formData)}
@@ -108,31 +108,6 @@ const AirtableForm = () => {
           />
         </Col>
       </Row>
-      {/* <div className='form'>
-        <Form
-          form={form}
-          name='validateOnly'
-          layout='vertical'
-          autoComplete='off'
-          onValuesChange={handleFormChange}
-        >
-          <Form.Item name='Focus' label='Focus'>
-            <Input />
-          </Form.Item>
-          <Form.Item name='Submitted On' label='Submitted On'>
-            <Input />
-          </Form.Item>
-          <Form.Item name='Name' label='Name' rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name='Dynamic Field' label='Dynamic Field'>
-            <Input />
-          </Form.Item>
-          <Form.Item name='Calculation' label='Calculation'>
-            <Input />
-          </Form.Item>
-        </Form>
-      </div> */}
     </div>
   );
 };

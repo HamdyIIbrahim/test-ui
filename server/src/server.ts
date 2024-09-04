@@ -66,7 +66,7 @@ const parseJSON = (data: any) => {
   try{
     return JSON.parse(data)
   } catch(e) {
-    console.log(e)
+    // console.log(e)
     return null
   }
 }
@@ -115,7 +115,7 @@ wss.on('connection', (conn, req) => {
   
   
   conn.on('message', async (message: any) => {
-    console.log(message.toString(), typeof message, message);
+    // console.log(message.toString(), typeof message, message);
     try {
       if (!baseId || !tableId || !recordId) return;
       let fieldId = undefined;
@@ -281,7 +281,8 @@ function readConfigFilesRecursively(dir: string): ConfigData[] {
         base,
         table,
         view,
-        viewConfig: {...configData}
+        viewConfig: {...configData.viewConfig},
+        uiSchema: {...configData.uiSchema}
       };
 
       results.push(enrichedConfig);
