@@ -56,6 +56,7 @@ const yjsValue = getYjsValue(store);
 const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   try {
     const record = await airtable.base(baseId).table(tableId).find(recordId);
+    console.log('record', record.fields)
     return record.fields;
   } catch (error) {
     console.error('Error fetching Airtable record:', error);
@@ -94,17 +95,18 @@ wss.on('connection', (conn, req) => {
   const base = airtable.base(baseId);
   const broadcastData = (data: any) => {
     wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN && client.room === currentRoom) {
+      if (client.readyState === WebSocket.OPEN && currentRoom) {
         conn.send(JSON.stringify({type: 'fetchedData', recordData: data}));
+        // console.log('Broadcasting data:', data);
       }
     });
   };
 
   let pollInterval = process.env.POLL_INTERVAL ? parseInt(process.env.POLL_INTERVAL) : 10000; // 10 seconds
   setInterval(async () => {
-    console.log('Polling Airtable for record data...');
+    // console.log('Polling Airtable for record data...');
     const recordData = await fetchAirtableRecord(recordId, baseId, tableId);
-    console.log('Fetched record data:', recordData);
+    // console.log('Fetched record data:', recordData);
 
     // Broadcast fetched data to all WebSocket clients
     if (recordData) {
@@ -115,7 +117,7 @@ wss.on('connection', (conn, req) => {
   
   
   conn.on('message', async (message: any) => {
-    // console.log(message.toString(), typeof message, message);
+    console.log(message.toString(), typeof message, message);
     try {
       if (!baseId || !tableId || !recordId) return;
       let fieldId = undefined;
@@ -135,7 +137,6 @@ wss.on('connection', (conn, req) => {
             console.log('Fetched record:', recordData);
       
             // Send the Airtable data to the client
-            conn.room = currentRoom;
             conn.send(JSON.stringify({type: 'fetchedData', recordData}));
           } else if (parsedMessage.type === 'updateField') {
             fieldId = parsedMessage.fieldId;
@@ -182,8 +183,8 @@ wss.on('connection', (conn, req) => {
 
         // Notify other clients in the same room about the update
         wss.clients.forEach((client) => {
-          console.log(client.readyState, client.readyState === WebSocket.OPEN, client.room, currentRoom);
-          if (client.readyState === WebSocket.OPEN && client.room === currentRoom) {
+          console.log(client.readyState, client.readyState === WebSocket.OPEN, currentRoom);
+          if (client.readyState === WebSocket.OPEN &&  currentRoom) {
             client.send(JSON.stringify({ type: 'updatedField', fieldId, value }));
           }
         });
@@ -203,7 +204,7 @@ wss.on('connection', (conn, req) => {
   });
 
   conn.on('close', () => {
-    console.log(`Connection closed for room: ${conn.roomName}`);
+    console.log(`Connection closed for room: ${currentRoom}`);
   });
 });
 

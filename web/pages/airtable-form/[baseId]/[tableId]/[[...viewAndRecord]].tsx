@@ -79,8 +79,9 @@ const AirtableForm = () => {
       });
     }
   };
+  console.log(formState.formData, formState.configData, isInitialLoad, Object.keys(formState.formData).length === 0);
 
-  if (!formState.formData || Object.keys(formState.formData).length === 0 || isInitialLoad) {
+  if (!formState.formData || isInitialLoad) {
     return <p>Loading...</p>;
   }
 
@@ -93,7 +94,7 @@ const AirtableForm = () => {
       <p>Record ID: {recordId}</p>
       <p>Form data: {JSON.stringify(formState.formData)}</p>
       <p>Form config: {JSON.stringify(formState.configData)}</p>
-      <Row justify="start">
+      {formState?.configData?.viewConfig ? <Row justify="start">
         <Col span={20}>
           <Form
             schema={formState.configData.viewConfig}
@@ -107,7 +108,7 @@ const AirtableForm = () => {
             // onSubmit={handleSubmit}
           />
         </Col>
-      </Row>
+      </Row> : <p>Loading...</p>}
     </div>
   );
 };
