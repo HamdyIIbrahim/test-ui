@@ -17,19 +17,8 @@ dotenv.config();
 const PORT = process.env.PORT || 8000;
 app.use(cors());
 const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
-
 // Setup SyncedStore (we'll use this to sync only the relevant data)
 const store = new syncedStore({ airtableData: {} });
-
-const fetchAirtableRecord = async (recordId, baseId, tableId) => {
-  try {
-    const record = await airtable.base(baseId).table(tableId).find(recordId);
-    return record.fields
-  } catch (error) {
-    console.error('Error fetching Airtable record:', error);
-    return null;
-  }
-};
 
 wss.on('connection', (conn, req) => {
   console.log('New WebSocket connection');
@@ -41,6 +30,7 @@ wss.on('connection', (conn, req) => {
   let currentRoom = `${baseId}-${tableId}-${recordId}`;
   const base = airtable.base(baseId);
   const broadcastData = (data: any) => {
+    if (data === undefined) return;
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN && currentRoom) {
         conn.send(JSON.stringify({type: 'fetchedData', recordData: data}));
@@ -49,22 +39,25 @@ wss.on('connection', (conn, req) => {
   };
 
   let pollInterval = process.env.POLL_INTERVAL ? parseInt(process.env.POLL_INTERVAL) : 10000; // 10 seconds
+  airtable.base(baseId).table(tableId).find(recordId).then((recordData) => {
+      broadcastData(recordData?.fields);
+  });
   setInterval(async () => {
-    const recordData = await fetchAirtableRecord(recordId, baseId, tableId);
-    if (recordData) {
-      broadcastData(recordData);
-    }
+    airtable.base(baseId).table(tableId).find(recordId).then((recordData) => {
+        broadcastData(recordData?.fields);
+    });
   }, pollInterval);
 
   conn.on('message', async (message: any) => {
-    console.log(message.toString(), typeof message, message);
+    // console.log(message);
     try {
       if (!baseId || !tableId || !recordId) return;
       let fieldId = undefined;
       let value = undefined;
 
       try {
-        const decodedMessage = new TextDecoder().decode(new Uint8Array(message));
+        let decodedMessage = new TextDecoder().decode(new Uint8Array(message));
+        console.log('Decoded message:', decodedMessage);
         const parsedMessage = JSON.parse(decodedMessage);
 
         if (parsedMessage && parsedMessage.type) {

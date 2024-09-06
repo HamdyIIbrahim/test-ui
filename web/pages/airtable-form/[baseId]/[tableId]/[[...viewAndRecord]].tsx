@@ -49,7 +49,6 @@ const AirtableForm = () => {
 
     // Update the SyncedStore
     Object.assign(formState.formData, changedFields);
-
     console.log(changedFields, JSON.stringify(formState.formData), formData);
 
     // Send updated fields to WebSocket server
@@ -67,16 +66,18 @@ const AirtableForm = () => {
 
   return (
     <div>
-      <h1>Dynamic Page</h1>
+      <h1>{formState?.configData?.viewConfig?.title}</h1>
 {/*
       <p>Base ID: {baseId}</p>
       <p>Table ID: {tableId}</p>
       {viewId && <p>View ID: {viewId}</p>}
       <p>Record ID: {recordId}</p>
+*/}
       <p>Form data: {JSON.stringify(formState.formData)}</p>
       <p>Form config: {JSON.stringify(formState.configData)}</p>
-*/}
-      {formState?.configData?.viewConfig ? <Row justify="start">
+      <p>View config: {JSON.stringify(formState?.configData?.viewConfig)}</p>
+      {Object.keys(formState?.formData).length > 0 && formState?.configData?.viewConfig ?
+      <Row justify="start">
         <Col span={20}>
           <Form
             schema={formState.configData.viewConfig}
@@ -88,7 +89,8 @@ const AirtableForm = () => {
             onChange={({ formData }) => handleFormChange(formData)}
           />
         </Col>
-      </Row> : <p>Loading...</p>}
+      </Row>
+      : <p>Loading...</p>}
     </div>
   );
 };
