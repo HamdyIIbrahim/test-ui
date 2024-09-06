@@ -1,10 +1,8 @@
 import express from 'express';
 import http from 'http';
 import * as WebSocket from 'ws';
-import { setupWSConnection } from 'y-websocket/bin/utils';
 import dotenv from 'dotenv';
 import Airtable from 'airtable';
-import Y from 'yjs';
 import { syncedStore, getYjsValue } from "@syncedstore/core";
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,13 +16,10 @@ dotenv.config();
 
 const PORT = process.env.PORT || 8000;
 app.use(cors());
-// Initialize Airtable (replace with your Airtable API Key)
 const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
 
 // Setup SyncedStore (we'll use this to sync only the relevant data)
 const store = new syncedStore({ airtableData: {} });
-const ydoc = new Y.Doc();
-const yjsValue = getYjsValue(store);
 
 const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   try {
@@ -36,59 +31,31 @@ const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   }
 };
 
-const parseJSON = (data: any) => {
-  try{
-    return JSON.parse(data)
-  } catch(e) {
-    // console.log(e)
-    return null
-  }
-}
-
-
-
 wss.on('connection', (conn, req) => {
-    console.log('New WebSocket connection');
-  // setupWSConnection(conn, req, { docName: 'form-synced-store' });
+  console.log('New WebSocket connection');
 
   const url = new URL(req.url as any, `http://${req.headers.host}`);
   const pathParts = url.pathname.split('-').filter(Boolean);
-  
-  // Extract path parameters
   const [ , , baseId, tableId, recordId ] = pathParts;
-  // conn.baseId = baseId;
-  // conn.tableId = tableId;
-  // conn.recordId = recordId;
-  const roomName = `airtable-room-${baseId}-${tableId}-${recordId}`;
 
-  // let doc = getOrCreateDocForRoom(roomName);
-  // console.log('doc', doc, roomName)
-  // setupWSConnection(conn, req);
   let currentRoom = `${baseId}-${tableId}-${recordId}`;
   const base = airtable.base(baseId);
   const broadcastData = (data: any) => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN && currentRoom) {
         conn.send(JSON.stringify({type: 'fetchedData', recordData: data}));
-        // console.log('Broadcasting data:', data);
       }
     });
   };
 
   let pollInterval = process.env.POLL_INTERVAL ? parseInt(process.env.POLL_INTERVAL) : 10000; // 10 seconds
   setInterval(async () => {
-    // console.log('Polling Airtable for record data...');
     const recordData = await fetchAirtableRecord(recordId, baseId, tableId);
-    // console.log('Fetched record data:', recordData);
-
-    // Broadcast fetched data to all WebSocket clients
     if (recordData) {
       broadcastData(recordData);
     }
   }, pollInterval);
 
-  
-  
   conn.on('message', async (message: any) => {
     console.log(message.toString(), typeof message, message);
     try {
@@ -98,7 +65,7 @@ wss.on('connection', (conn, req) => {
 
       try {
         const decodedMessage = new TextDecoder().decode(new Uint8Array(message));
-        const parsedMessage = parseJSON(decodedMessage);
+        const parsedMessage = JSON.parse(decodedMessage);
 
         if (parsedMessage && parsedMessage.type) {
           if (parsedMessage.type == 'fetch') {
@@ -116,34 +83,6 @@ wss.on('connection', (conn, req) => {
             console.log(`Received message1: ${decodedMessage}`);
           }
         }
-
-        // if (message instanceof ArrayBuffer) {
-        //   const uint8Array = new Uint8Array(message);
-        //   const decodedMessage = new TextDecoder('utf-8').decode(message);
-        //   let parsedMessage = JSON.parse(decodedMessage);
-        //   fieldId = parsedMessage.fieldId;
-        //   value = parsedMessage.value;
-        //   console.log(`Received message1: ${decodedMessage}`);
-        // } else if (message instanceof Buffer) {
-        //   const decoder = new TextDecoder('utf-8');
-        //   const stringMessage = decoder.decode(message);
-        //   if (stringMessage === 'fetch') {
-        //     const record = await base(tableId).find(recordId);
-        //     const recordData = { ...record.fields };
-        //     // Object.keys(recordData).forEach((key) => {
-        //     //   store.airtableData[key] = recordData[key];
-        //     // });
-        //     console.log('Fetched record:', recordData);
-      
-        //     // Send the Airtable data to the client
-        //     conn.send(JSON.stringify(recordData));
-        //   }
-        // }else {
-        //   let parsedMessage = JSON.parse(message);
-        //   fieldId = parsedMessage.fieldId;
-        //   value = parsedMessage.value;
-        //   console.log(`Received message2: ${message}`);
-        // }
       } catch (error) {
         console.log('error', error);
       }
@@ -179,24 +118,6 @@ wss.on('connection', (conn, req) => {
     console.log(`Connection closed for room: ${currentRoom}`);
   });
 });
-
-// wss.on('connection', (ws: WebSocket) => {
-//   console.log('New WebSocket connection');
-
-//   ws.on('message', (message: string) => {
-//     console.log('Received:', message + ' ' + new Date().getTime());
-
-//     // Echo the message back to the client
-//     ws.send(`Server received: ${message}`);
-//   });
-
-//     ws.on('close', () => {
-//       console.log('WebSocket connection closed');
-//     });
-
-//   // Send a welcome message
-//   ws.send('Welcome to the WebSocket server!');
-// });
 
 function getOrCreateDocForRoom(roomId: string): Doc {
   // Implement logic to return an existing document or create a new one for the room
@@ -257,7 +178,6 @@ function readConfigFilesRecursively(dir: string): ConfigData[] {
         viewConfig: {...configData.viewConfig},
         uiSchema: {...configData.uiSchema}
       };
-
       results.push(enrichedConfig);
     }
   });
@@ -270,24 +190,6 @@ app.get('/api/configs', (req, res) => {
   res.send(allConfigs);
 });
 
-
 server.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });
-
-// // Polling for updates and sending to specific rooms (optional for real-time sync)
-// setInterval(async () => {
-//   wss.clients.forEach(async (client) => {
-//     if (client.readyState === WebSocket.OPEN && client.room) {
-//       const [baseId, tableId, recordId] = client.room.split('-');
-//       const base = airtable.base(baseId);
-
-//       const record = await base(tableId).find(recordId);
-//       console.log('record1', JSON.stringify({ fields: record.fields }));
-//       const data = JSON.stringify({ fields: record.fields });
-
-//       // Send the updated data only to clients in the same room
-//       client.send(data);
-//     }
-//   });
-// }, 5000); // Poll every 5 seconds
