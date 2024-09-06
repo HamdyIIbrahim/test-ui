@@ -26,43 +26,22 @@ const store = new syncedStore({ airtableData: {} });
 const ydoc = new Y.Doc();
 const yjsValue = getYjsValue(store);
 
-// wss.on('connection', (conn, req) => {
-//     console.log('New WebSocket connection');
-//   setupWSConnection(conn, req, { docName: 'form-synced-store' });
-//   conn.on('message', (message: ArrayBuffer) => {
-//     // Convert ArrayBuffer to string
-//     // const decoder = new TextDecoder('utf-8');
-//     // const decodedMessage = decoder.decode(message);
-
-//     // Log the received message
-//     // console.log('Received:', decodedMessage + ' ' + new Date().getTime());
-
-//     // If the message is JSON, parse it
-//     // try {
-//     //   const jsonMessage = JSON.parse(decodedMessage);
-//     //   console.log('Parsed JSON:', jsonMessage);
-//     // } catch (e) {
-//     //   console.log('Message is not JSON:', decodedMessage);
-//     // }
-//     if (message instanceof ArrayBuffer) {
-//         const uint8Array = new Uint8Array(message);
-//         const decodedMessage = new TextDecoder().decode(uint8Array);
-//         console.log(`Received message: ${decodedMessage}`);
-//     } else {
-//         console.log(`Received message: ${message}`);
-//     }
-//   });
-// });
 const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   try {
     const record = await airtable.base(baseId).table(tableId).find(recordId);
-    console.log('record', record.fields)
-    return record.fields;
+    // # Remove \n from the fields
+    Object.keys(record.fields).forEach((key) => {
+      if (typeof record.fields[key] === 'string') {
+        record.fields[key] = record.fields[key].replace(/\n/g, '');
+      }
+    });
+    return record.fields
   } catch (error) {
     console.error('Error fetching Airtable record:', error);
     return null;
   }
 };
+
 const parseJSON = (data: any) => {
   try{
     return JSON.parse(data)
@@ -135,7 +114,6 @@ wss.on('connection', (conn, req) => {
               store.airtableData[key] = recordData[key];
             });
             console.log('Fetched record:', recordData);
-      
             // Send the Airtable data to the client
             conn.send(JSON.stringify({type: 'fetchedData', recordData}));
           } else if (parsedMessage.type === 'updateField') {
