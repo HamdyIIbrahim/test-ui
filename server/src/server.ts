@@ -29,12 +29,6 @@ const yjsValue = getYjsValue(store);
 const fetchAirtableRecord = async (recordId, baseId, tableId) => {
   try {
     const record = await airtable.base(baseId).table(tableId).find(recordId);
-    // # Remove \n from the fields
-    Object.keys(record.fields).forEach((key) => {
-      if (typeof record.fields[key] === 'string') {
-        record.fields[key] = record.fields[key].replace(/\n/g, '');
-      }
-    });
     return record.fields
   } catch (error) {
     console.error('Error fetching Airtable record:', error);
